@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Inter } from "next/font/google";
+import { Barlow_Condensed, DM_Sans, Fraunces } from "next/font/google";
 import "@/components/arc/foundation.css";
 import "./globals.css";
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+const fraunces = Fraunces({ subsets: ["latin"], axes: ["SOFT", "WONK", "opsz"], variable: "--font-fraunces", display: "swap" });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
+const barlow = Barlow_Condensed({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-barlow", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Liste de Noël",
@@ -13,21 +14,13 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#1c1c1c" },
-  ],
+  themeColor: "#123f30",
 };
-
-// Arc lit le thème sur data-theme : on suit celui de l'appareil, avant le premier rendu.
-const themeScript = `(function(){try{var m=window.matchMedia('(prefers-color-scheme: dark)');var a=function(){document.documentElement.dataset.theme=m.matches?'dark':'light'};a();m.addEventListener('change',a)}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" data-accent="coral" suppressHydrationWarning className={`${geist.variable} ${inter.variable}`}>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
+    // Une seule ambiance, celle d'une planche de timbres : vert sapin et papier crème, de jour comme de nuit.
+    <html lang="fr" data-theme="light" className={`${fraunces.variable} ${dmSans.variable} ${barlow.variable}`}>
       <body>{children}</body>
     </html>
   );

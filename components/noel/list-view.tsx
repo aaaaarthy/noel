@@ -6,7 +6,7 @@ import { Button } from "@/components/arc/button/button";
 import { CopyButton } from "@/components/arc/copy-button/copy-button";
 import { EmptyState } from "@/components/arc/empty-state/empty-state";
 import { Input } from "@/components/arc/input/input";
-import { MetricCard } from "@/components/arc/metric-card/metric-card";
+import { AnimatedCounter } from "@/components/arc/animated-counter/animated-counter";
 import { Rating } from "@/components/arc/rating/rating";
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control";
 import { Skeleton } from "@/components/arc/skeleton/skeleton";
@@ -15,7 +15,7 @@ import Toast from "@/components/arc/toast/toast";
 import { api, ApiError, scrapeLink, type GiftList, type Item, type ItemInput } from "@/lib/api";
 import { DESIRE_LABELS, isHttpUrl } from "@/lib/format";
 import { local } from "@/lib/local";
-import { Footer, Header, useDaysUntilChristmas } from "./bits";
+import { Footer, Header, Postmark, Waves, useDaysUntilChristmas } from "./bits";
 import { ItemCard } from "./item-card";
 import { ItemDialog } from "./item-dialog";
 import { ListDialog, ReserveDialog } from "./small-dialogs";
@@ -106,11 +106,13 @@ export default function ListView({ slug, initial }: { slug: string; initial: Gif
       <>
         <Header />
         <main className={`page ${styles.listPage}`}>
-          <EmptyState
-            icon={<Gift aria-hidden="true" />}
-            title="Cette liste n'existe pas"
-            description="Le lien est peut-être incomplet. Demande-le à nouveau à la personne qui te l'a envoyé."
-          />
+          <div className={styles.emptyCard}>
+            <EmptyState
+              icon={<Gift aria-hidden="true" />}
+              title="Cette liste n'existe pas"
+              description="Le lien est peut-être incomplet. Demande-le à nouveau à la personne qui te l'a envoyé."
+            />
+          </div>
         </main>
         <Footer />
       </>
@@ -122,7 +124,7 @@ export default function ListView({ slug, initial }: { slug: string; initial: Gif
       <>
         <Header />
         <main className={`page ${styles.listPage}`} aria-busy="true">
-          <Skeleton lines={3} label="Chargement de la liste" />
+          <div className={styles.emptyCard}><Skeleton lines={3} label="Chargement de la liste" /></div>
         </main>
       </>
     );
@@ -220,6 +222,7 @@ export default function ListView({ slug, initial }: { slug: string; initial: Gif
 
   const total = current.items.reduce((sum, i) => sum + (i.price ?? 0), 0);
   const free = current.items.filter(i => !i.reserved).length;
+  const dreams = current.items.filter(i => i.desire === 5).length;
   const publicUrl = `${origin}/l/${slug}`;
   const editUrl = token ? `${publicUrl}?k=${token}` : "";
   const cardMode = role === "owner" ? "owner" : role === "visitor" ? "visitor" : "loading";
@@ -231,19 +234,39 @@ export default function ListView({ slug, initial }: { slug: string; initial: Gif
       <main className={`page ${styles.listPage}`}>
         <section className={styles.intro} aria-labelledby="list-title">
           <div className={styles.introText}>
-            <h1 id="list-title" className={styles.listTitle}>{current.title}</h1>
+            <p className={styles.kicker}>Liste de Noël</p>
+            <h1 id="list-title" className={`${styles.display} ${styles.listTitle}`}>{current.title}</h1>
             <p className={styles.byline}>Organisée par {current.owner_name}</p>
             {current.message ? <p className={styles.message}>{current.message}</p> : null}
           </div>
-          {role === "owner" ? (
-            <Button variant="secondary" onClick={() => setEditingList(true)}>Modifier la liste</Button>
-          ) : null}
+          <div className={styles.introAside}>
+            <Waves className={styles.introWaves} />
+            <Postmark
+              className={styles.introPostmark}
+              top="Noël dans"
+              bottom="Paris · 25 déc."
+              big={days === null ? "…" : String(Math.max(days, 0))}
+              small={days === 1 ? "jour" : "jours"}
+            />
+            {role === "owner" ? (
+              <Button variant="secondary" onClick={() => setEditingList(true)}>Modifier la liste</Button>
+            ) : null}
+          </div>
         </section>
 
-        <div className={styles.metrics}>
-          <MetricCard label="Idées" value={n} context={role === "visitor" ? `${free} encore libre${free > 1 ? "s" : ""}` : "dans la liste"} />
-          <MetricCard label="Budget total" value={Math.round(total)} suffix={"\u00a0€"} context="si tout est offert" />
-          <MetricCard label="Noël dans" value={Math.max(days ?? 0, 0)} suffix={days === 1 ? "\u00a0jour" : "\u00a0jours"} context="le 25 décembre" />
+        <div className={styles.tickets}>
+          <div className={styles.ticket}>
+            <span className={styles.ticketLabel}>Idées</span>
+            <span className={styles.ticketValue}><AnimatedCounter value={n} /></span>
+          </div>
+          <div className={styles.ticket}>
+            <span className={styles.ticketLabel}>Budget total</span>
+            <span className={styles.ticketValue}><AnimatedCounter value={Math.round(total)} suffix={"\u00a0€"} /></span>
+          </div>
+          <div className={styles.ticket}>
+            <span className={styles.ticketLabel}>{role === "visitor" ? "Encore libres" : "Rêves absolus"}</span>
+            <span className={styles.ticketValue}><AnimatedCounter value={role === "visitor" ? free : dreams} /></span>
+          </div>
         </div>
 
         {role === "owner" ? (
@@ -288,9 +311,10 @@ export default function ListView({ slug, initial }: { slug: string; initial: Gif
 
         {items.length > 0 ? (
           <div className={styles.grid}>
-            {items.map(item => (
+            {items.map((item, index) => (
               <ItemCard
                 key={item.id}
+                index={index}
                 item={item}
                 mode={cardMode}
                 mine={!!reservations[item.id]}
@@ -303,18 +327,18 @@ export default function ListView({ slug, initial }: { slug: string; initial: Gif
             ))}
           </div>
         ) : role === "owner" ? (
-          <EmptyState
+          <div className={styles.emptyCard}><EmptyState
             icon={<Gift aria-hidden="true" />}
             title="Ta liste est vide"
             description="Colle le lien d'un produit dans « Ajouter un cadeau » : son nom, sa photo et son prix se remplissent tout seuls."
-          />
+          /></div>
         ) : role === "visitor" ? (
-          <EmptyState
+          <div className={styles.emptyCard}><EmptyState
             icon={<Gift aria-hidden="true" />}
             title={n ? "Tout est réservé" : "Pas encore d'idées"}
             description={n ? "Chaque cadeau a déjà quelqu'un pour l'offrir." : `${current.owner_name} n'a encore rien ajouté. Repasse un peu plus tard.`}
             action={n ? <Button variant="secondary" onClick={() => setFilter("tous")}>Voir tous les cadeaux</Button> : undefined}
-          />
+          /></div>
         ) : null}
       </main>
       <Footer />
@@ -416,7 +440,7 @@ function AddPanel({ onAdd, onManual }: { onAdd: (url: string, desire: number) =>
           <Rating label="Niveau d'envie" value={desire} onChange={v => v >= 1 && setDesire(v)} allowClear={false} valueLabels={DESIRE_LABELS} />
           <div className={styles.addActions}>
             <Button type="button" variant="ghost" onClick={onManual}>Ajouter sans lien</Button>
-            <Button type="submit" loading={busy}>{done ? "Ajouté" : "Ajouter le cadeau"}</Button>
+            <Button className={styles.cta} type="submit" loading={busy}>{done ? "Ajouté" : "Ajouter le cadeau"}</Button>
           </div>
         </div>
       </form>

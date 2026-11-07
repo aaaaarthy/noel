@@ -46,3 +46,25 @@ export function hostLabel(url: string | null): string | null {
     return null;
   }
 }
+
+/** "34,99 €" → { units: "34", rest: ",99 €" } pour écrire les centimes en petit. */
+export function splitPrice(price: number, currency = "EUR"): { units: string; rest: string } {
+  try {
+    const parts = new Intl.NumberFormat("fr-FR", { style: "currency", currency, maximumFractionDigits: price % 1 === 0 ? 0 : 2 }).formatToParts(price);
+    const i = parts.findIndex(p => p.type === "decimal" || p.type === "literal" || p.type === "currency");
+    const units = parts.slice(0, i === -1 ? parts.length : i).map(p => p.value).join("");
+    const rest = parts.slice(i === -1 ? parts.length : i).map(p => p.value).join("").replace(/ | /g, " ");
+    return { units, rest };
+  } catch {
+    return { units: String(Math.floor(price)), rest: " €" };
+  }
+}
+
+const TINTS = ["var(--tint-peach)", "var(--tint-sky)", "var(--tint-mint)", "var(--tint-rose)", "var(--tint-butter)"];
+
+/** Une teinte stable par cadeau, tirée de son identifiant. */
+export function tintFor(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return TINTS[h % TINTS.length];
+}
